@@ -1,11 +1,7 @@
-module Model exposing (Model, Topic, init, withStatus, withTopics)
+module Model exposing (Model, init, withStatus, withTopics)
 
 import PulsarCommands exposing (PulsarConfig)
-
-
-type alias Topic =
-    { name : String }
-
+import PulsarModel exposing (Topic)
 
 type alias Model =
     { pulsarConfig : PulsarConfig

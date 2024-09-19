@@ -1,21 +1,9 @@
-module PulsarCommands exposing (Mode(..), PulsarConfig, loadTopics, topicsDecoder, Topic)
+module PulsarCommands exposing (PulsarConfig, loadTopics, topicsDecoder)
 
 import Http
 import Json.Decode as Decode
 import Parser exposing ((|.), (|=))
-
-
-type Mode
-    = NonPersistent
-    | Persistent
-
-
-type alias Topic =
-    { mode : Mode
-    , orga : String
-    , namespace : String
-    , name : String
-    }
+import PulsarModel exposing (Mode(..), Topic)
 
 
 type alias PulsarConfig =

@@ -1,12 +1,12 @@
 module Update exposing (Msg(..), update)
 
-import List.Extra
 import Model exposing (Model, withStatus, withTopics)
 import PulsarCommands exposing (loadTopics)
+import PulsarModel exposing (Topic)
 
 
 type alias FetchResult =
-    List PulsarCommands.Topic
+    List Topic
 
 
 type Msg
@@ -29,15 +29,9 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Done result ->
-            let
-
-                topics =
-                    List.map .name result
-                    |> List.map (\name -> {name = name})
-            in
             model
                 |> withStatus (String.join " / " [ "fetching done" ])
-                |> withTopics topics
+                |> withTopics result
                 |> withNoCommand
 
         FetchPulsar ->
