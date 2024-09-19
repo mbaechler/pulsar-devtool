@@ -1,6 +1,6 @@
 module PulsarCommands exposing (PulsarConfig, loadTopics, topicsDecoder)
 
-import Http
+import Http exposing (Body, Expect, Header)
 import Json.Decode as Decode
 import Parser exposing ((|.), (|=))
 import PulsarModel exposing (Mode(..), Topic)
@@ -18,23 +18,46 @@ type alias PulsarConfig =
     }
 
 
+type alias Request msg =
+    { method : String
+    , headers : List Header
+    , url : String
+    , body : Body
+    , expect : Expect msg
+    , timeout : Maybe Float
+    , tracker : Maybe String
+    }
+
+
 loadTopics f pulsar =
-    Http.request
-        { method = "GET"
-        , headers = [ token pulsar.token ]
-        , url = String.join "/" [ pulsar.httpUrl, "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace ]
-        , body = Http.emptyBody
-        , expect =
-            Http.expectJson
-                f
-                topicsDecoder
-        , timeout = Nothing
-        , tracker = Nothing
+    getRequest
+        { url = String.join "/" [ pulsar.httpUrl, "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace ]
+        , expect = Http.expectJson f topicsDecoder
         }
+        |> withBearerToken pulsar.token
+        |> Http.request
 
 
-token t =
-    Http.header "Authorization" <| String.join " " [ "Bearer", t ]
+getRequest : { url : String, expect : Expect msg } -> Request msg
+getRequest { url, expect } =
+    { method = "GET"
+    , headers = []
+    , url = url
+    , body = Http.emptyBody
+    , expect = expect
+    , timeout = Nothing
+    , tracker = Nothing
+    }
+
+
+withBearerToken token =
+    String.join " " [ "Bearer", token ]
+        |> Http.header "Authorization"
+        |> prependHeader
+
+
+prependHeader header request =
+    { request | headers = header :: request.headers }
 
 
 topicParser =
@@ -84,4 +107,8 @@ topicsDecoder =
                 |> Result.toMaybe
     in
     Decode.list Decode.string
-        |> Decode.map (List.filterMap toTopic) --FIXME we'd rather keep failing parsings for warning/logs
+        |> Decode.map (List.filterMap toTopic)
+
+
+
+--FIXME we'd rather keep failing parsings for warning/logs
