@@ -6,7 +6,7 @@ import PulsarCommands exposing (loadTopics)
 
 
 type alias FetchResult =
-    List String
+    List PulsarCommands.Topic
 
 
 type Msg
@@ -30,13 +30,10 @@ update msg model =
     case msg of
         Done result ->
             let
-                toTopic url =
-                    String.split "/" url
-                        |> List.Extra.last
-                        |> Maybe.map (\name -> { name = name })
 
                 topics =
-                    List.filterMap toTopic result
+                    List.map .name result
+                    |> List.map (\name -> {name = name})
             in
             model
                 |> withStatus (String.join " / " [ "fetching done" ])
