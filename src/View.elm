@@ -8,12 +8,15 @@ import Update exposing (Msg(..))
 
 view : Model -> Html Msg
 view model =
-    let
-        topicList =
-            table [] (List.map (\topic -> tr [] [ td [] [ text topic.name ] ]) model.topics)
-    in
     div []
         [ button [ onClick FetchPulsar ] [ text "send request" ]
         , div [] [ text model.status ]
-        , div [] [ topicList ]
+        , div [] [ showTopicList model.topics ]
         ]
+
+showTopicList topics =
+    topics
+    |> List.map showTopic
+    |> table []
+
+showTopic topic = tr [] [ td [] [ text topic.name ] ]
