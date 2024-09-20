@@ -1,8 +1,10 @@
 module PulsarModel exposing (Mode(..), Topic)
 
+
 type Mode
     = NonPersistent
     | Persistent
+
 
 type alias Topic =
     { mode : Mode

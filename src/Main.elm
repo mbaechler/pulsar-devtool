@@ -1,9 +1,11 @@
 module Main exposing (..)
 
 import Browser
+import Browser.Navigation as Navigation
 import Model exposing (Model)
 import PulsarCommands exposing (PulsarConfig)
 import Update exposing (Msg(..), update)
+import Url
 import View exposing (view)
 
 
@@ -21,14 +23,26 @@ pulsar =
 
 
 main =
-    Browser.element
+    Browser.application
         { init = init
         , update = update
         , view = view
         , subscriptions = \_ -> Sub.none
+        , onUrlChange = onUrlChange
+        , onUrlRequest = onUrlRequest
         }
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
-    ( Model.init pulsar, Cmd.none )
+init : () -> Url.Url -> Navigation.Key -> ( Model, Cmd Msg )
+init _ _ key =
+    ( Model.init key pulsar, Cmd.none )
+
+
+onUrlRequest : Browser.UrlRequest -> Msg
+onUrlRequest =
+    UrlRequested
+
+
+onUrlChange : Url.Url -> Msg
+onUrlChange =
+    UrlChanged
