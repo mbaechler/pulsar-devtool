@@ -15,7 +15,7 @@ view model =
         [ div
             []
             [ a [ href "http://perdu.com" ] [ text "let me out" ]
-            , button [ onClick FetchPulsar ] [ text "send request" ]
+            , button [ onClick FetchListPulsar ] [ text "send request" ]
             , div [] [ text model.status ]
             , div [] [ viewPage model ]
             ]
@@ -30,7 +30,7 @@ viewPage { topics, currentPage } =
             viewList topics
 
         TopicPage topic ->
-            viewTopic topic.topicName
+            viewTopic topic
 
 
 viewList : List Topic -> Html Msg
@@ -44,6 +44,15 @@ viewListTopic topic =
     tr [] [ td [] [ a [ href <| topicUrl topic ] [ text topic.name ] ] ]
 
 
-viewTopic : String -> Html msg
-viewTopic name =
-    tr [] [ td [] [ text name ] ]
+viewTopic :
+    { topicName : String
+    , version : Maybe Int
+    , creationDate : Maybe String
+    , modificationDate : Maybe String
+    }
+    -> Html msg
+viewTopic { topicName, version, creationDate, modificationDate } =
+    table []
+        [ tr [] [ td [] [ text "name" ], td [] [ text "version" ], td [] [ text "created" ], td [] [ text "modified" ] ]
+        , tr [] [ td [] [ text topicName ], td [] [ text <| (version |> Maybe.map String.fromInt |> Maybe.withDefault "") ], td [] [ text <| Maybe.withDefault "" creationDate ], td [] [ text <| Maybe.withDefault "" modificationDate ] ]
+        ]

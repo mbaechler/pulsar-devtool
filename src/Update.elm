@@ -2,23 +2,26 @@ module Update exposing (Msg(..), topicUrl, update)
 
 import Browser
 import Browser.Navigation as Navigation
-import Model exposing (Model, Page(..), clearStatus, withCurrentPage, withStatus, withTopics)
-import PulsarCommands exposing (loadTopics)
+import Model exposing (Model, Page(..), withCurrentPage, withStatus, withTopics)
+import PulsarCommands exposing (InternalInfo, loadTopicInternalInfo, loadTopics)
 import PulsarModel exposing (Topic)
 import RouteBuilder exposing (Route, dynamic, root, s, string)
 import Url
 import Url.Parser exposing (Parser, oneOf, parse)
 
 
-type alias FetchResult =
+type alias FetchListResult =
     List Topic
 
+type alias FetchTopicInternalInfoResult =
+    InternalInfo
 
 type Msg
-    = FetchPulsar
-    | Done FetchResult
-    | FetchFailed
-    | Details Topic
+    = FetchListPulsar
+    | FetchListDone FetchListResult
+    | FetchListFailed
+    | FetchTopicInternalInfoDone FetchTopicInternalInfoResult
+    | FetchTopicInternalInfoFailed
     | UrlRequested Browser.UrlRequest
     | UrlChanged Url.Url
 
@@ -36,13 +39,13 @@ withNoCommand =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Done result ->
+        FetchListDone result ->
             model
                 |> withStatus (String.join " / " [ "fetching done" ])
                 |> withTopics result
                 |> withNoCommand
 
-        FetchPulsar ->
+        FetchListPulsar ->
             model
                 |> withStatus "fetching in progress"
                 |> withTopics []
@@ -51,22 +54,17 @@ update msg model =
                         (\result ->
                             case result of
                                 Err _ ->
-                                    FetchFailed
+                                    FetchListFailed
 
                                 Ok value ->
-                                    Done value
+                                    FetchListDone value
                         )
                         model.pulsarConfig
                     )
 
-        FetchFailed ->
+        FetchListFailed ->
             model
-                |> withStatus (String.join " / " [ "fetch failed" ])
-                |> withNoCommand
-
-        Details topic ->
-            model
-                |> clearStatus
+                |> withStatus (String.join " / " [ "fetch list failed" ])
                 |> withNoCommand
 
         UrlRequested urlRequest ->
@@ -93,7 +91,37 @@ update msg model =
                 Just (TopicPage topic) ->
                     model
                         |> withCurrentPage (TopicPage topic)
-                        |> withNoCommand
+                        |> withCommand (loadTopicInternalInfo
+                                                   (\result ->
+                                                       case result of
+                                                           Err _ ->
+                                                               FetchTopicInternalInfoFailed
+
+                                                           Ok value ->
+                                                               FetchTopicInternalInfoDone value
+                                                   )
+                                                   model.pulsarConfig topic.topicName
+                                               )
+
+        FetchTopicInternalInfoDone info ->
+            case model.currentPage of
+                ListPage -> model |> withNoCommand
+
+                TopicPage topicPageModel ->
+                    model
+                    |> withCurrentPage (TopicPage
+                        { topicPageModel
+                        | version = Just info.version
+                        , creationDate = Just info.creationDate
+                        , modificationDate = Just info.modificationDate
+                        })
+                    |> withNoCommand
+
+        FetchTopicInternalInfoFailed ->
+                        model
+                            |> withStatus (String.join " / " [ "fetch internalinfo failed" ])
+                            |> withNoCommand
+
 
 
 type alias TopicPageModel =
@@ -110,7 +138,7 @@ topicUrl topic =
 
 
 topicParser =
-    topicRoute.toParser TopicPage
+    topicRoute.toParser (\topicPageModel -> TopicPage { topicName = topicPageModel.topicName, creationDate = Nothing, modificationDate = Nothing, version = Nothing})
 
 
 type alias ListPageModel =

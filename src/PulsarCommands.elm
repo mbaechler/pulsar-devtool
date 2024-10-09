@@ -1,4 +1,4 @@
-module PulsarCommands exposing (PulsarConfig, loadTopics, topicsDecoder)
+module PulsarCommands exposing (PulsarConfig, internalInfoDecoder, loadTopics, topicsDecoder, loadTopicInternalInfo, InternalInfo)
 
 import Http exposing (Body, Expect, Header)
 import Json.Decode as Decode
@@ -33,6 +33,16 @@ loadTopics f pulsar =
     getRequest
         { url = String.join "/" [ pulsar.httpUrl, "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace ]
         , expect = Http.expectJson f topicsDecoder
+        }
+        |> withBearerToken pulsar.token
+        |> Http.request
+
+
+loadTopicInternalInfo f pulsar topic =
+    -- FIXME: urlencode topic
+    getRequest
+        { url = String.join "/" [ pulsar.httpUrl, "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace, topic, "internal-info" ]
+        , expect = Http.expectJson f internalInfoDecoder
         }
         |> withBearerToken pulsar.token
         |> Http.request
@@ -108,6 +118,21 @@ topicsDecoder =
     in
     Decode.list Decode.string
         |> Decode.map (List.filterMap toTopic)
+
+
+type alias InternalInfo =
+    { version : Int
+    , creationDate : String
+    , modificationDate : String
+    }
+
+
+internalInfoDecoder : Decode.Decoder InternalInfo
+internalInfoDecoder =
+    Decode.map3 InternalInfo
+        (Decode.field "version" Decode.int)
+        (Decode.field "creationDate" Decode.string)
+        (Decode.field "modificationDate" Decode.string)
 
 
 

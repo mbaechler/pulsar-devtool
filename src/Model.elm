@@ -7,7 +7,12 @@ import PulsarModel exposing (Topic)
 
 type Page
     = ListPage
-    | TopicPage { topicName : String }
+    | TopicPage
+        { topicName : String
+        , version : Maybe Int
+        , creationDate : Maybe String
+        , modificationDate : Maybe String
+        }
 
 
 type alias Model =
