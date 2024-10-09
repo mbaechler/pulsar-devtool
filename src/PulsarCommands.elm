@@ -6,6 +6,7 @@ import Json.Decode.Pipeline as Decode
 import Parser exposing ((|.), (|=))
 import PulsarModel exposing (Mode(..), Topic)
 import Time exposing (Posix, millisToPosix)
+import Url.Builder
 
 
 type alias PulsarConfig =
@@ -33,7 +34,7 @@ type alias Request msg =
 
 loadTopics f pulsar =
     getRequest
-        { url = String.join "/" [ pulsar.httpUrl, "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace ]
+        { url = Url.Builder.crossOrigin pulsar.httpUrl [ "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace ] []
         , expect = Http.expectJson f topicsDecoder
         }
         |> withBearerToken pulsar.token
@@ -41,9 +42,8 @@ loadTopics f pulsar =
 
 
 loadTopicInternalInfo f pulsar topic =
-    -- FIXME: urlencode topic
     getRequest
-        { url = String.join "/" [ pulsar.httpUrl, "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace, topic, "internal-info" ]
+        { url = Url.Builder.crossOrigin pulsar.httpUrl [ "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace, topic, "internal-info" ] []
         , expect = Http.expectJson f internalInfoDecoder
         }
         |> withBearerToken pulsar.token
