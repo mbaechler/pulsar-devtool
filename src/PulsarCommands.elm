@@ -1,7 +1,8 @@
-module PulsarCommands exposing (PulsarConfig, internalInfoDecoder, loadTopics, topicsDecoder, loadTopicInternalInfo, InternalInfo)
+module PulsarCommands exposing (InternalInfo, PulsarConfig, internalInfoDecoder, loadTopicInternalInfo, loadTopics, topicsDecoder)
 
 import Http exposing (Body, Expect, Header)
 import Json.Decode as Decode
+import Json.Decode.Pipeline as Decode
 import Parser exposing ((|.), (|=))
 import PulsarModel exposing (Mode(..), Topic)
 
@@ -129,10 +130,10 @@ type alias InternalInfo =
 
 internalInfoDecoder : Decode.Decoder InternalInfo
 internalInfoDecoder =
-    Decode.map3 InternalInfo
-        (Decode.field "version" Decode.int)
-        (Decode.field "creationDate" Decode.string)
-        (Decode.field "modificationDate" Decode.string)
+    Decode.succeed InternalInfo
+        |> Decode.required "version" Decode.int
+        |> Decode.required "creationDate" Decode.string
+        |> Decode.required "modificationDate" Decode.string
 
 
 
