@@ -83,7 +83,9 @@ update msg model =
         UrlChanged url ->
             case parse routes url of
                 Just ListPage ->
-                    model |> withNoCommand
+                    model
+                        |> withCurrentPage ListPage
+                        |> withNoCommand
 
                 Nothing ->
                     model |> withNoCommand
@@ -111,6 +113,19 @@ topicParser =
     topicRoute.toParser TopicPage
 
 
+type alias ListPageModel =
+    {}
+
+
+listRoute : Route ListPageModel Page
+listRoute =
+    root |> dynamic ListPageModel
+
+
+listParser =
+    listRoute.toParser (\_ -> ListPage)
+
+
 routes =
     oneOf
-        [ topicParser ]
+        [ topicParser, listParser ]
