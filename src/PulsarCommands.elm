@@ -5,6 +5,7 @@ import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 import Parser exposing ((|.), (|=))
 import PulsarModel exposing (Mode(..), Topic)
+import Time exposing (Posix, millisToPosix)
 
 
 type alias PulsarConfig =
@@ -125,6 +126,16 @@ type alias InternalInfo =
     { version : Int
     , creationDate : String
     , modificationDate : String
+    , ledgers : List Ledger
+    }
+
+
+type alias Ledger =
+    { ledgerId : Int
+    , entries : Maybe Int
+    , size : Maybe Int
+    , timestamp : Posix
+    , isOffloaded : Bool
     }
 
 
@@ -134,6 +145,17 @@ internalInfoDecoder =
         |> Decode.required "version" Decode.int
         |> Decode.required "creationDate" Decode.string
         |> Decode.required "modificationDate" Decode.string
+        |> Decode.required "ledgers" (Decode.list ledgerDecoder)
+
+
+ledgerDecoder : Decode.Decoder Ledger
+ledgerDecoder =
+    Decode.succeed Ledger
+        |> Decode.required "ledgerId" Decode.int
+        |> Decode.optional "entries" (Decode.nullable Decode.int) Nothing
+        |> Decode.optional "size" (Decode.nullable Decode.int) Nothing
+        |> Decode.required "timestamp" (Decode.int |> Decode.map millisToPosix)
+        |> Decode.required "isOffloaded" Decode.bool
 
 
 
