@@ -2,9 +2,10 @@ module Main exposing (..)
 
 import Browser
 import Browser.Navigation as Navigation
+import LocalStorage
 import Model exposing (Model)
 import PulsarCommands exposing (PulsarConfig)
-import Update exposing (Msg(..), update)
+import Update exposing (Msg(..), localstorage, subscriptions, update)
 import Url
 import View exposing (view)
 
@@ -18,16 +19,16 @@ pulsar =
     , httpUrl = "http://localhost:8000/api"
     , namespace = "pulsar_18866379-bc72-4180-9a01-207bae3ee6c3"
     , tenant = "orga_e8400f27-5fb2-4a31-933e-539e63507291"
-    , token = ""
     }
 
 
+main : Program () Model Msg
 main =
     Browser.application
         { init = init
         , update = update
         , view = view
-        , subscriptions = \_ -> Sub.none
+        , subscriptions = subscriptions
         , onUrlChange = onUrlChange
         , onUrlRequest = onUrlRequest
         }
@@ -35,7 +36,12 @@ main =
 
 init : () -> Url.Url -> Navigation.Key -> ( Model, Cmd Msg )
 init _ _ key =
-    ( Model.init key pulsar, Cmd.none )
+    ( Model.init key pulsar, loadPulsarSecret )
+
+
+loadPulsarSecret : Cmd Msg
+loadPulsarSecret =
+    LocalStorage.getItem localstorage "secret"
 
 
 onUrlRequest : Browser.UrlRequest -> Msg

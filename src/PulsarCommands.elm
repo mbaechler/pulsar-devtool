@@ -1,8 +1,9 @@
-module PulsarCommands exposing (InternalInfo, PulsarConfig, internalInfoDecoder, loadTopicInternalInfo, loadTopics, topicsDecoder)
+module PulsarCommands exposing (InternalInfo, PulsarConfig, PulsarToken, decodeToken, encodeToken, internalInfoDecoder, loadTopicInternalInfo, loadTopics, makeToken, topicsDecoder)
 
 import Http exposing (Body, Expect, Header)
-import Json.Decode as Decode
+import Json.Decode as Decode exposing (Error)
 import Json.Decode.Pipeline as Decode
+import Json.Encode
 import Parser exposing ((|.), (|=))
 import PulsarModel exposing (Mode(..), Topic)
 import Time exposing (Posix, millisToPosix)
@@ -17,7 +18,6 @@ type alias PulsarConfig =
     , httpUrl : String
     , namespace : String
     , tenant : String
-    , token : String
     }
 
 
@@ -32,21 +32,39 @@ type alias Request msg =
     }
 
 
-loadTopics f pulsar =
+type PulsarToken
+    = PulsarToken String
+
+
+makeToken =
+    PulsarToken
+
+
+encodeToken : PulsarToken -> Json.Encode.Value
+encodeToken (PulsarToken pulsarToken) =
+    Json.Encode.string pulsarToken
+
+
+decodeToken : Json.Encode.Value -> Result Error String
+decodeToken value =
+    Decode.decodeValue Decode.string value
+
+
+loadTopics f pulsar token =
     getRequest
         { url = Url.Builder.crossOrigin pulsar.httpUrl [ "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace ] []
         , expect = Http.expectJson f topicsDecoder
         }
-        |> withBearerToken pulsar.token
+        |> withBearerToken token
         |> Http.request
 
 
-loadTopicInternalInfo f pulsar topic =
+loadTopicInternalInfo f pulsar topic token =
     getRequest
         { url = Url.Builder.crossOrigin pulsar.httpUrl [ "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace, topic, "internal-info" ] []
         , expect = Http.expectJson f internalInfoDecoder
         }
-        |> withBearerToken pulsar.token
+        |> withBearerToken token
         |> Http.request
 
 
@@ -62,7 +80,7 @@ getRequest { url, expect } =
     }
 
 
-withBearerToken token =
+withBearerToken (PulsarToken token) =
     String.join " " [ "Bearer", token ]
         |> Http.header "Authorization"
         |> prependHeader
