@@ -1,7 +1,8 @@
-module Model exposing (Model, Page(..), clearStatus, init, withCurrentPage, withSecret, withStatus, withTopics)
+module Model exposing (Model, Page(..), clearStatus, clearToken, init, withCurrentPage, withStatus, withToken, withTopics)
 
 import Browser.Navigation as Navigation
-import PulsarCommands exposing (PulsarConfig, PulsarToken, makeToken)
+import Pulsar exposing (PulsarToken, makeToken)
+import PulsarCommands exposing (PulsarConfig)
 import PulsarModel exposing (Topic)
 
 
@@ -23,7 +24,7 @@ type alias Model =
     , status : String
     , topics : List Topic
     , currentPage : Page
-    , secret : PulsarToken
+    , token : PulsarToken
     }
 
 
@@ -33,7 +34,7 @@ init key pulsar =
     , status = "nothing"
     , topics = []
     , currentPage = Loading
-    , secret = makeToken ""
+    , token = makeToken ""
     }
 
 
@@ -57,6 +58,11 @@ withCurrentPage page model =
     { model | currentPage = page }
 
 
-withSecret : String -> Model -> Model
-withSecret secret model =
-    { model | secret = makeToken secret }
+withToken : PulsarToken -> Model -> Model
+withToken token model =
+    { model | token = token }
+
+
+clearToken : Model -> Model
+clearToken model =
+    { model | token = makeToken "" }

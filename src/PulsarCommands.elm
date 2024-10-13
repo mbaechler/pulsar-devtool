@@ -1,10 +1,10 @@
-module PulsarCommands exposing (InternalInfo, PulsarConfig, PulsarToken, decodeToken, encodeToken, internalInfoDecoder, loadTopicInternalInfo, loadTopics, makeToken, topicsDecoder)
+module PulsarCommands exposing (InternalInfo, PulsarConfig, internalInfoDecoder, loadTopicInternalInfo, loadTopics, topicsDecoder)
 
 import Http exposing (Body, Expect, Header)
 import Json.Decode as Decode exposing (Error)
 import Json.Decode.Pipeline as Decode
-import Json.Encode
 import Parser exposing ((|.), (|=))
+import Pulsar
 import PulsarModel exposing (Mode(..), Topic)
 import Time exposing (Posix, millisToPosix)
 import Url.Builder
@@ -30,24 +30,6 @@ type alias Request msg =
     , timeout : Maybe Float
     , tracker : Maybe String
     }
-
-
-type PulsarToken
-    = PulsarToken String
-
-
-makeToken =
-    PulsarToken
-
-
-encodeToken : PulsarToken -> Json.Encode.Value
-encodeToken (PulsarToken pulsarToken) =
-    Json.Encode.string pulsarToken
-
-
-decodeToken : Json.Encode.Value -> Result Error String
-decodeToken value =
-    Decode.decodeValue Decode.string value
 
 
 loadTopics f pulsar token =
@@ -80,8 +62,8 @@ getRequest { url, expect } =
     }
 
 
-withBearerToken (PulsarToken token) =
-    String.join " " [ "Bearer", token ]
+withBearerToken token =
+    String.join " " [ "Bearer", Pulsar.tokenAsString token ]
         |> Http.header "Authorization"
         |> prependHeader
 
