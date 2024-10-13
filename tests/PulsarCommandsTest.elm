@@ -3,7 +3,7 @@ module PulsarCommandsTest exposing (suite)
 import Expect exposing (Expectation)
 import Json.Decode
 import PulsarCommands exposing (internalInfoDecoder, topicsDecoder)
-import PulsarModel exposing (Mode(..))
+import PulsarModel exposing (Mode(..), makeTopicName)
 import PulsarCommands exposing (topicsDecoder)
 import Test exposing (..)
 import Time exposing (millisToPosix)
@@ -29,14 +29,14 @@ suite =
                 Json.Decode.decodeString topicsDecoder json
                     |> Expect.equal
                         (Ok
-                            [ { mode = Persistent, orga = "orga_e8400f27-5fb2-4a31-933e-539e63507291", namespace = "pulsar_18866379-bc72-4180-9a01-207bae3ee6c3", name = "James-outgoing-partition-0" }
-                            , { mode = Persistent, orga = "orga_e8400f27-5fb2-4a31-933e-539e63507291", namespace = "pulsar_18866379-bc72-4180-9a01-207bae3ee6c3", name = "James-spool-partition-0" }
-                            , { mode = Persistent, orga = "orga_e8400f27-5fb2-4a31-933e-539e63507291", namespace = "pulsar_18866379-bc72-4180-9a01-207bae3ee6c3", name = "outgoing-scheduled-partition-0" }
-                            , { mode = Persistent, orga = "orga_e8400f27-5fb2-4a31-933e-539e63507291", namespace = "pulsar_18866379-bc72-4180-9a01-207bae3ee6c3", name = "pmq-filter-outgoing-partition-0" }
-                            , { mode = Persistent, orga = "orga_e8400f27-5fb2-4a31-933e-539e63507291", namespace = "pulsar_18866379-bc72-4180-9a01-207bae3ee6c3", name = "pmq-filter-scheduled-outgoing-partition-0" }
-                            , { mode = Persistent, orga = "orga_e8400f27-5fb2-4a31-933e-539e63507291", namespace = "pulsar_18866379-bc72-4180-9a01-207bae3ee6c3", name = "pmq-filter-scheduled-spool-partition-0" }
-                            , { mode = Persistent, orga = "orga_e8400f27-5fb2-4a31-933e-539e63507291", namespace = "pulsar_18866379-bc72-4180-9a01-207bae3ee6c3", name = "pmq-filter-spool-partition-0" }
-                            , { mode = Persistent, orga = "orga_e8400f27-5fb2-4a31-933e-539e63507291", namespace = "pulsar_18866379-bc72-4180-9a01-207bae3ee6c3", name = "spool-scheduled-partition-0" }
+                            [ { mode = Persistent, orga = "orga_e8400f27-5fb2-4a31-933e-539e63507291", namespace = "pulsar_18866379-bc72-4180-9a01-207bae3ee6c3", name = makeTopicName "James-outgoing-partition-0" }
+                            , { mode = Persistent, orga = "orga_e8400f27-5fb2-4a31-933e-539e63507291", namespace = "pulsar_18866379-bc72-4180-9a01-207bae3ee6c3", name = makeTopicName "James-spool-partition-0" }
+                            , { mode = Persistent, orga = "orga_e8400f27-5fb2-4a31-933e-539e63507291", namespace = "pulsar_18866379-bc72-4180-9a01-207bae3ee6c3", name = makeTopicName "outgoing-scheduled-partition-0" }
+                            , { mode = Persistent, orga = "orga_e8400f27-5fb2-4a31-933e-539e63507291", namespace = "pulsar_18866379-bc72-4180-9a01-207bae3ee6c3", name = makeTopicName "pmq-filter-outgoing-partition-0" }
+                            , { mode = Persistent, orga = "orga_e8400f27-5fb2-4a31-933e-539e63507291", namespace = "pulsar_18866379-bc72-4180-9a01-207bae3ee6c3", name = makeTopicName "pmq-filter-scheduled-outgoing-partition-0" }
+                            , { mode = Persistent, orga = "orga_e8400f27-5fb2-4a31-933e-539e63507291", namespace = "pulsar_18866379-bc72-4180-9a01-207bae3ee6c3", name = makeTopicName "pmq-filter-scheduled-spool-partition-0" }
+                            , { mode = Persistent, orga = "orga_e8400f27-5fb2-4a31-933e-539e63507291", namespace = "pulsar_18866379-bc72-4180-9a01-207bae3ee6c3", name = makeTopicName "pmq-filter-spool-partition-0" }
+                            , { mode = Persistent, orga = "orga_e8400f27-5fb2-4a31-933e-539e63507291", namespace = "pulsar_18866379-bc72-4180-9a01-207bae3ee6c3", name = makeTopicName "spool-scheduled-partition-0" }
                             ]
                         )
         , test "should decode internal info" <|

@@ -1,11 +1,11 @@
-module PulsarCommands exposing (InternalInfo, PulsarConfig, internalInfoDecoder, loadTopicInternalInfo, loadTopics, topicsDecoder)
+module PulsarCommands exposing (InternalInfo, PulsarConfig, internalInfoDecoder, listSubscriptions, loadTopicInternalInfo, loadTopics, topicsDecoder)
 
 import Http exposing (Body, Expect, Header)
 import Json.Decode as Decode exposing (Error)
-import Json.Decode.Pipeline as Decode
+import Json.Decode.Pipeline exposing (optional, required)
 import Parser exposing ((|.), (|=))
 import Pulsar
-import PulsarModel exposing (Mode(..), Topic)
+import PulsarModel exposing (Mode(..), SubscriptionName, Topic, TopicName, makeSubscriptionName, makeTopicName, topicNameAsString)
 import Time exposing (Posix, millisToPosix)
 import Url.Builder
 
@@ -32,6 +32,7 @@ type alias Request msg =
     }
 
 
+loadTopics : (Result Http.Error (List Topic) -> msg) -> PulsarConfig -> Pulsar.PulsarToken -> Cmd msg
 loadTopics f pulsar token =
     getRequest
         { url = Url.Builder.crossOrigin pulsar.httpUrl [ "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace ] []
@@ -41,10 +42,21 @@ loadTopics f pulsar token =
         |> Http.request
 
 
+loadTopicInternalInfo : (Result Http.Error InternalInfo -> msg) -> PulsarConfig -> TopicName -> Pulsar.PulsarToken -> Cmd msg
 loadTopicInternalInfo f pulsar topic token =
     getRequest
-        { url = Url.Builder.crossOrigin pulsar.httpUrl [ "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace, topic, "internal-info" ] []
+        { url = Url.Builder.crossOrigin pulsar.httpUrl [ "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace, topicNameAsString topic, "internal-info" ] []
         , expect = Http.expectJson f internalInfoDecoder
+        }
+        |> withBearerToken token
+        |> Http.request
+
+
+listSubscriptions : (Result Http.Error (List SubscriptionName) -> msg) -> PulsarConfig -> TopicName -> Pulsar.PulsarToken -> Cmd msg
+listSubscriptions f pulsar topic token =
+    getRequest
+        { url = Url.Builder.crossOrigin pulsar.httpUrl [ "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace, topicNameAsString topic, "subscriptions" ] []
+        , expect = Http.expectJson f (Decode.list (Decode.string |> Decode.map makeSubscriptionName))
         }
         |> withBearerToken token
         |> Http.request
@@ -105,7 +117,7 @@ topicParser =
         |. Parser.symbol "/"
         |= namespace
         |. Parser.symbol "/"
-        |= name
+        |= (name |> Parser.map makeTopicName)
         |. Parser.end
 
 
@@ -142,20 +154,20 @@ type alias Ledger =
 internalInfoDecoder : Decode.Decoder InternalInfo
 internalInfoDecoder =
     Decode.succeed InternalInfo
-        |> Decode.required "version" Decode.int
-        |> Decode.required "creationDate" Decode.string
-        |> Decode.required "modificationDate" Decode.string
-        |> Decode.required "ledgers" (Decode.list ledgerDecoder)
+        |> required "version" Decode.int
+        |> required "creationDate" Decode.string
+        |> required "modificationDate" Decode.string
+        |> required "ledgers" (Decode.list ledgerDecoder)
 
 
 ledgerDecoder : Decode.Decoder Ledger
 ledgerDecoder =
     Decode.succeed Ledger
-        |> Decode.required "ledgerId" Decode.int
-        |> Decode.optional "entries" (Decode.nullable Decode.int) Nothing
-        |> Decode.optional "size" (Decode.nullable Decode.int) Nothing
-        |> Decode.required "timestamp" (Decode.int |> Decode.map millisToPosix)
-        |> Decode.required "isOffloaded" Decode.bool
+        |> required "ledgerId" Decode.int
+        |> optional "entries" (Decode.nullable Decode.int) Nothing
+        |> optional "size" (Decode.nullable Decode.int) Nothing
+        |> required "timestamp" (Decode.int |> Decode.map millisToPosix)
+        |> required "isOffloaded" Decode.bool
 
 
 

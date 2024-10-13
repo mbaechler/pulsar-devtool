@@ -5,7 +5,7 @@ import Html exposing (Html, a, button, div, input, label, table, td, text, tr)
 import Html.Attributes exposing (href)
 import Html.Events exposing (onClick, onInput)
 import Model exposing (Model, Page(..))
-import PulsarModel exposing (Topic)
+import PulsarModel exposing (SubscriptionName, Topic, TopicName, subscriptionNameAsString, topicNameAsString)
 import Update exposing (Msg(..), topicUrl)
 
 
@@ -49,22 +49,39 @@ viewList topics =
         ]
 
 
+viewListTopic : Topic -> Html msg
 viewListTopic topic =
-    tr [] [ td [] [ a [ href <| topicUrl topic ] [ text topic.name ] ] ]
+    tr [] [ td [] [ a [ href <| topicUrl topic ] [ text <| topicNameAsString topic.name ] ] ]
 
 
 viewTopic :
-    { topicName : String
-    , version : Maybe Int
-    , creationDate : Maybe String
-    , modificationDate : Maybe String
+    { a
+        | topicName : TopicName
+        , version : Maybe Int
+        , creationDate : Maybe String
+        , modificationDate : Maybe String
+        , subscriptions : Maybe (List SubscriptionName)
     }
     -> Html msg
-viewTopic { topicName, version, creationDate, modificationDate } =
+viewTopic { topicName, version, creationDate, modificationDate, subscriptions } =
     table []
         [ tr [] [ td [] [ text "name" ], td [] [ text "version" ], td [] [ text "created" ], td [] [ text "modified" ] ]
-        , tr [] [ td [] [ text topicName ], td [] [ text <| (version |> Maybe.map String.fromInt |> Maybe.withDefault "") ], td [] [ text <| Maybe.withDefault "" creationDate ], td [] [ text <| Maybe.withDefault "" modificationDate ] ]
+        , tr [] [ td [] [ text <| topicNameAsString topicName ], td [] [ text <| (version |> Maybe.map String.fromInt |> Maybe.withDefault "") ], td [] [ text <| Maybe.withDefault "" creationDate ], td [] [ text <| Maybe.withDefault "" modificationDate ] ]
+        , tr [] [ td [] [ viewSubscriptions subscriptions ] ]
         ]
+
+
+viewSubscriptions : Maybe (List SubscriptionName) -> Html msg
+viewSubscriptions subscriptions =
+    table [] <|
+        [ tr [] [ td [] [ text "subscriptions" ] ] ]
+            ++ (subscriptions
+                    |> Maybe.withDefault []
+                    |> List.map
+                        (\subscription ->
+                            tr [] [ td [] [ text <| subscriptionNameAsString subscription ] ]
+                        )
+               )
 
 
 viewSecret =

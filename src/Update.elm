@@ -4,8 +4,8 @@ import Browser
 import Browser.Navigation as Navigation
 import Model exposing (Model, Page(..), clearToken, withCurrentPage, withStatus, withToken, withTopics)
 import Pulsar exposing (makeToken)
-import PulsarCommands exposing (InternalInfo, loadTopicInternalInfo, loadTopics)
-import PulsarModel exposing (Topic)
+import PulsarCommands exposing (InternalInfo, listSubscriptions, loadTopicInternalInfo, loadTopics)
+import PulsarModel exposing (SubscriptionName, Topic, makeTopicName, topicNameAsString)
 import RouteBuilder exposing (Route, dynamic, root, s, static, string)
 import Secret exposing (Msg(..), savePulsarToken)
 import Url
@@ -26,6 +26,8 @@ type Msg
     | FetchListFailed
     | FetchTopicInternalInfoDone FetchTopicInternalInfoResult
     | FetchTopicInternalInfoFailed
+    | FetchTopicSubscriptionsDone (List SubscriptionName)
+    | FetchTopicSubscriptionsFailed
     | UrlRequested Browser.UrlRequest
     | UrlChanged Url.Url
     | LocalStorage Secret.Msg
@@ -143,7 +145,20 @@ update msg model =
                                     , modificationDate = Just info.modificationDate
                                 }
                             )
-                        |> withNoCommand
+                        |> withCommand
+                            (listSubscriptions
+                                (\result ->
+                                    case result of
+                                        Err _ ->
+                                            FetchTopicSubscriptionsFailed
+
+                                        Ok subscriptionNames ->
+                                            FetchTopicSubscriptionsDone subscriptionNames
+                                )
+                                model.pulsarConfig
+                                topicPageModel.topicName
+                                model.token
+                            )
 
                 SecretPage ->
                     model |> withNoCommand
@@ -203,6 +218,32 @@ update msg model =
                 |> withStatus "invalid credentials"
                 |> withNoCommand
 
+        FetchTopicSubscriptionsDone subscriptionNames ->
+            case model.currentPage of
+                Loading ->
+                    model |> withNoCommand
+
+                ListPage ->
+                    model |> withNoCommand
+
+                TopicPage topicPageModel ->
+                    model
+                        |> withCurrentPage
+                            (TopicPage
+                                { topicPageModel
+                                    | subscriptions = Just subscriptionNames
+                                }
+                            )
+                        |> withNoCommand
+
+                SecretPage ->
+                    model |> withNoCommand
+
+        FetchTopicSubscriptionsFailed ->
+            model
+                |> withStatus "list subscriptions failed"
+                |> withNoCommand
+
 
 type alias TopicPageModel =
     { topicName : String }
@@ -213,12 +254,13 @@ topicRoute =
     root |> s "topic" |> string .topicName |> dynamic TopicPageModel
 
 
+topicUrl : Topic -> String
 topicUrl topic =
-    topicRoute.toString { topicName = topic.name }
+    topicRoute.toString { topicName = topicNameAsString topic.name }
 
 
 topicParser =
-    topicRoute.toParser (\topicPageModel -> TopicPage { topicName = topicPageModel.topicName, creationDate = Nothing, modificationDate = Nothing, version = Nothing })
+    topicRoute.toParser (\topicPageModel -> TopicPage { topicName = makeTopicName topicPageModel.topicName, creationDate = Nothing, modificationDate = Nothing, version = Nothing, subscriptions = Nothing })
 
 
 listRoute : Route () Page

@@ -3,7 +3,7 @@ module Model exposing (Model, Page(..), clearStatus, clearToken, init, withCurre
 import Browser.Navigation as Navigation
 import Pulsar exposing (PulsarToken, makeToken)
 import PulsarCommands exposing (PulsarConfig)
-import PulsarModel exposing (Topic)
+import PulsarModel exposing (SubscriptionName, Topic, TopicName)
 
 
 type Page
@@ -11,10 +11,11 @@ type Page
     | SecretPage
     | ListPage
     | TopicPage
-        { topicName : String
+        { topicName : TopicName
         , version : Maybe Int
         , creationDate : Maybe String
         , modificationDate : Maybe String
+        , subscriptions : Maybe (List SubscriptionName)
         }
 
 
