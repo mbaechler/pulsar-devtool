@@ -4,7 +4,8 @@ import Browser
 import Browser.Navigation as Navigation
 import Model exposing (Model, Page(..), clearToken, withCurrentPage, withStatus, withToken, withTopics)
 import Pulsar exposing (makeToken)
-import PulsarCommands exposing (InternalInfo, listSubscriptions, loadTopicInternalInfo, loadTopics)
+import Pulsar.Protocol.TopicInternalInfo exposing (InternalInfo)
+import PulsarCommands exposing (listSubscriptions, loadTopicInternalInfo, loadTopics)
 import PulsarModel exposing (SubscriptionName, Topic, makeTopicName, topicNameAsString)
 import RouteBuilder exposing (Route, dynamic, root, s, static, string)
 import Secret exposing (Msg(..), savePulsarToken)

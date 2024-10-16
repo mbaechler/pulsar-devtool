@@ -1,12 +1,11 @@
-module PulsarCommands exposing (InternalInfo, PulsarConfig, internalInfoDecoder, listSubscriptions, loadTopicInternalInfo, loadTopics, topicsDecoder)
+module PulsarCommands exposing (PulsarConfig, listSubscriptions, loadTopicInternalInfo, loadTopics)
 
 import Http exposing (Body, Expect, Header)
 import Json.Decode as Decode exposing (Error)
-import Json.Decode.Pipeline exposing (optional, required)
-import Parser exposing ((|.), (|=))
 import Pulsar
-import PulsarModel exposing (Mode(..), SubscriptionName, Topic, TopicName, makeSubscriptionName, makeTopicName, topicNameAsString)
-import Time exposing (Posix, millisToPosix)
+import Pulsar.Protocol.TopicInternalInfo exposing (InternalInfo, internalInfoDecoder)
+import Pulsar.Protocol.Topics exposing (topicsDecoder)
+import PulsarModel exposing (Mode(..), SubscriptionName, Topic, TopicName, makeSubscriptionName, topicNameAsString)
 import Url.Builder
 
 
@@ -82,92 +81,6 @@ withBearerToken token =
 
 prependHeader header request =
     { request | headers = header :: request.headers }
-
-
-topicParser =
-    let
-        isNotSlash =
-            (/=) '/'
-
-        segment =
-            Parser.getChompedString <|
-                Parser.succeed ()
-                    |. Parser.chompIf isNotSlash
-                    |. Parser.chompWhile isNotSlash
-
-        orga =
-            segment
-
-        namespace =
-            segment
-
-        name =
-            segment
-
-        mode =
-            Parser.oneOf
-                [ Parser.map (\_ -> Persistent) <| Parser.keyword "persistent"
-                , Parser.map (\_ -> NonPersistent) <| Parser.keyword "non-persistent"
-                ]
-    in
-    Parser.succeed Topic
-        |= mode
-        |. Parser.symbol "://"
-        |= orga
-        |. Parser.symbol "/"
-        |= namespace
-        |. Parser.symbol "/"
-        |= (name |> Parser.map makeTopicName)
-        |. Parser.end
-
-
-topicsDecoder : Decode.Decoder (List Topic)
-topicsDecoder =
-    let
-        toTopic : String -> Maybe Topic
-        toTopic url =
-            url
-                |> Parser.run topicParser
-                |> Result.toMaybe
-    in
-    Decode.list Decode.string
-        |> Decode.map (List.filterMap toTopic)
-
-
-type alias InternalInfo =
-    { version : Int
-    , creationDate : String
-    , modificationDate : String
-    , ledgers : List Ledger
-    }
-
-
-type alias Ledger =
-    { ledgerId : Int
-    , entries : Maybe Int
-    , size : Maybe Int
-    , timestamp : Posix
-    , isOffloaded : Bool
-    }
-
-
-internalInfoDecoder : Decode.Decoder InternalInfo
-internalInfoDecoder =
-    Decode.succeed InternalInfo
-        |> required "version" Decode.int
-        |> required "creationDate" Decode.string
-        |> required "modificationDate" Decode.string
-        |> required "ledgers" (Decode.list ledgerDecoder)
-
-
-ledgerDecoder : Decode.Decoder Ledger
-ledgerDecoder =
-    Decode.succeed Ledger
-        |> required "ledgerId" Decode.int
-        |> optional "entries" (Decode.nullable Decode.int) Nothing
-        |> optional "size" (Decode.nullable Decode.int) Nothing
-        |> required "timestamp" (Decode.int |> Decode.map millisToPosix)
-        |> required "isOffloaded" Decode.bool
 
 
 

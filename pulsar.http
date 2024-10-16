@@ -1,13 +1,16 @@
-###
+### list topics
 
 GET {{url}}admin/v2/persistent/{{tenant}}/{{namespace}}
 Authorization: Bearer {{token}}
 
-###
+### retrieve topic internal info
 GET {{url}}admin/v2/persistent/{{tenant}}/{{namespace}}/James-outgoing-partition-0/internal-info
 Authorization: Bearer {{token}}
 
+### list topic statistics and subscriptions
+GET {{url}}admin/v2/persistent/{{tenant}}/{{namespace}}/James-outgoing-partition-0/stats
+Authorization: Bearer {{token}}
 
-###
+### list subscription names
 GET {{url}}admin/v2/persistent/{{tenant}}/{{namespace}}/James-outgoing-partition-0/subscriptions
 Authorization: Bearer {{token}}
