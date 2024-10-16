@@ -1,9 +1,9 @@
-module Model exposing (Model, Page(..), clearStatus, clearToken, init, withCurrentPage, withStatus, withToken, withTopics)
+module Model exposing (Model, Page(..), clearStatus, clearToken, init, withCurrentPage, withStatus, withSubscriptions, withToken, withTopics)
 
 import Browser.Navigation as Navigation
 import Pulsar exposing (PulsarToken, makeToken)
 import PulsarCommands exposing (PulsarConfig)
-import PulsarModel exposing (SubscriptionName, Topic, TopicName)
+import PulsarModel exposing (Subscription, SubscriptionName, Topic, TopicName)
 
 
 type Page
@@ -15,7 +15,7 @@ type Page
         , version : Maybe Int
         , creationDate : Maybe String
         , modificationDate : Maybe String
-        , subscriptions : Maybe (List SubscriptionName)
+        , subscriptions : Maybe (List Subscription)
         }
 
 
@@ -67,3 +67,19 @@ withToken token model =
 clearToken : Model -> Model
 clearToken model =
     { model | token = makeToken "" }
+
+
+withSubscriptions : List Subscription -> Page -> Page
+withSubscriptions subscriptions page =
+    case page of
+        Loading ->
+            page
+
+        SecretPage ->
+            page
+
+        ListPage ->
+            page
+
+        TopicPage model ->
+            TopicPage { model | subscriptions = Just subscriptions }

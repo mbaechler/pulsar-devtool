@@ -1,4 +1,4 @@
-module PulsarModel exposing (Mode(..), SubscriptionName, Topic, TopicName, makeSubscriptionName, makeTopicName, subscriptionNameAsString, topicNameAsString)
+module PulsarModel exposing (Mode(..), Subscription, SubscriptionName, Topic, TopicName, makeSubscriptionName, makeTopicName, subscriptionNameAsString, topicNameAsString)
 
 
 type Mode
@@ -22,8 +22,16 @@ type SubscriptionName
     = SubscriptionName String
 
 
-subscriptionNameAsString (SubscriptionName name) =
-    name
+type alias Subscription =
+    { name : SubscriptionName
+    , durable : Bool
+    , hasConsumers : Bool
+    }
+
+
+subscriptionNameAsString : Subscription -> String
+subscriptionNameAsString =
+    .name >> (\(SubscriptionName s) -> s)
 
 
 makeSubscriptionName =

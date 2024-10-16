@@ -2,10 +2,11 @@ module Update exposing (Msg(..), subscriptions, topicUrl, update)
 
 import Browser
 import Browser.Navigation as Navigation
-import Model exposing (Model, Page(..), clearToken, withCurrentPage, withStatus, withToken, withTopics)
+import Model exposing (Model, Page(..), clearToken, withCurrentPage, withStatus, withSubscriptions, withToken, withTopics)
 import Pulsar exposing (makeToken)
 import Pulsar.Protocol.TopicInternalInfo exposing (InternalInfo)
-import PulsarCommands exposing (listSubscriptions, loadTopicInternalInfo, loadTopics)
+import Pulsar.Protocol.TopicStats exposing (TopicStats)
+import PulsarCommands exposing (loadTopicInternalInfo, loadTopics, topicStats)
 import PulsarModel exposing (SubscriptionName, Topic, makeTopicName, topicNameAsString)
 import RouteBuilder exposing (Route, dynamic, root, s, static, string)
 import Secret exposing (Msg(..), savePulsarToken)
@@ -27,8 +28,8 @@ type Msg
     | FetchListFailed
     | FetchTopicInternalInfoDone FetchTopicInternalInfoResult
     | FetchTopicInternalInfoFailed
-    | FetchTopicSubscriptionsDone (List SubscriptionName)
-    | FetchTopicSubscriptionsFailed
+    | FetchTopicStatsDone TopicStats
+    | FetchTopicStatsFailed
     | UrlRequested Browser.UrlRequest
     | UrlChanged Url.Url
     | LocalStorage Secret.Msg
@@ -147,14 +148,14 @@ update msg model =
                                 }
                             )
                         |> withCommand
-                            (listSubscriptions
+                            (topicStats
                                 (\result ->
                                     case result of
                                         Err _ ->
-                                            FetchTopicSubscriptionsFailed
+                                            FetchTopicStatsFailed
 
                                         Ok subscriptionNames ->
-                                            FetchTopicSubscriptionsDone subscriptionNames
+                                            FetchTopicStatsDone subscriptionNames
                                 )
                                 model.pulsarConfig
                                 topicPageModel.topicName
@@ -219,30 +220,25 @@ update msg model =
                 |> withStatus "invalid credentials"
                 |> withNoCommand
 
-        FetchTopicSubscriptionsDone subscriptionNames ->
-            case model.currentPage of
-                Loading ->
-                    model |> withNoCommand
+        FetchTopicStatsDone topicStats ->
+            let
+                buildSubscription fromApi =
+                    { name = fromApi.name
+                    , durable = fromApi.durable
+                    , hasConsumers = not <| List.isEmpty fromApi.consumers
+                    }
 
-                ListPage ->
-                    model |> withNoCommand
-
-                TopicPage topicPageModel ->
-                    model
-                        |> withCurrentPage
-                            (TopicPage
-                                { topicPageModel
-                                    | subscriptions = Just subscriptionNames
-                                }
-                            )
-                        |> withNoCommand
-
-                SecretPage ->
-                    model |> withNoCommand
-
-        FetchTopicSubscriptionsFailed ->
+                page =
+                    model.currentPage
+                        |> withSubscriptions (topicStats |> .subscriptions |> List.map buildSubscription)
+            in
             model
-                |> withStatus "list subscriptions failed"
+                |> withCurrentPage page
+                |> withNoCommand
+
+        FetchTopicStatsFailed ->
+            model
+                |> withStatus "get topic stats failed"
                 |> withNoCommand
 
 

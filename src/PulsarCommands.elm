@@ -1,9 +1,10 @@
-module PulsarCommands exposing (PulsarConfig, listSubscriptions, loadTopicInternalInfo, loadTopics)
+module PulsarCommands exposing (PulsarConfig, listSubscriptions, loadTopicInternalInfo, loadTopics, topicStats)
 
 import Http exposing (Body, Expect, Header)
 import Json.Decode as Decode exposing (Error)
 import Pulsar
 import Pulsar.Protocol.TopicInternalInfo exposing (InternalInfo, internalInfoDecoder)
+import Pulsar.Protocol.TopicStats exposing (TopicStats, topicStatsDecoder)
 import Pulsar.Protocol.Topics exposing (topicsDecoder)
 import PulsarModel exposing (Mode(..), SubscriptionName, Topic, TopicName, makeSubscriptionName, topicNameAsString)
 import Url.Builder
@@ -56,6 +57,16 @@ listSubscriptions f pulsar topic token =
     getRequest
         { url = Url.Builder.crossOrigin pulsar.httpUrl [ "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace, topicNameAsString topic, "subscriptions" ] []
         , expect = Http.expectJson f (Decode.list (Decode.string |> Decode.map makeSubscriptionName))
+        }
+        |> withBearerToken token
+        |> Http.request
+
+
+topicStats : (Result Http.Error TopicStats -> msg) -> PulsarConfig -> TopicName -> Pulsar.PulsarToken -> Cmd msg
+topicStats f pulsar topic token =
+    getRequest
+        { url = Url.Builder.crossOrigin pulsar.httpUrl [ "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace, topicNameAsString topic, "stats" ] []
+        , expect = Http.expectJson f topicStatsDecoder
         }
         |> withBearerToken token
         |> Http.request

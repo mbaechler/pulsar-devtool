@@ -5,7 +5,7 @@ import Html exposing (Html, a, button, div, input, label, table, td, text, tr)
 import Html.Attributes exposing (href)
 import Html.Events exposing (onClick, onInput)
 import Model exposing (Model, Page(..))
-import PulsarModel exposing (SubscriptionName, Topic, TopicName, subscriptionNameAsString, topicNameAsString)
+import PulsarModel exposing (Subscription, SubscriptionName, Topic, TopicName, subscriptionNameAsString, topicNameAsString)
 import Update exposing (Msg(..), topicUrl)
 
 
@@ -60,7 +60,7 @@ viewTopic :
         , version : Maybe Int
         , creationDate : Maybe String
         , modificationDate : Maybe String
-        , subscriptions : Maybe (List SubscriptionName)
+        , subscriptions : Maybe (List Subscription)
     }
     -> Html msg
 viewTopic { topicName, version, creationDate, modificationDate, subscriptions } =
@@ -71,15 +71,36 @@ viewTopic { topicName, version, creationDate, modificationDate, subscriptions } 
         ]
 
 
-viewSubscriptions : Maybe (List SubscriptionName) -> Html msg
+viewSubscriptions : Maybe (List Subscription) -> Html msg
 viewSubscriptions subscriptions =
     table [] <|
-        [ tr [] [ td [] [ text "subscriptions" ] ] ]
+        [ tr [] [ td [] [ text "subscriptions" ] ]
+        , tr [] [ td [] [ text "name" ], td [] [ text "durable" ], td [] [ text "status" ] ]
+        ]
             ++ (subscriptions
                     |> Maybe.withDefault []
                     |> List.map
                         (\subscription ->
-                            tr [] [ td [] [ text <| subscriptionNameAsString subscription ] ]
+                            tr []
+                                [ td []
+                                    [ text <| subscriptionNameAsString subscription ]
+                                , td []
+                                    [ text <|
+                                        if subscription.durable then
+                                            "Durable"
+
+                                        else
+                                            "Non durable"
+                                    ]
+                                , td []
+                                    [ text <|
+                                        if subscription.hasConsumers then
+                                            "Consuming"
+
+                                        else
+                                            "Stalled"
+                                    ]
+                                ]
                         )
                )
 

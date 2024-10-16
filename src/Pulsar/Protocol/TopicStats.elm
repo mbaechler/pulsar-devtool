@@ -2,6 +2,7 @@ module Pulsar.Protocol.TopicStats exposing (TopicStats, topicStatsDecoder)
 
 import Json.Decode exposing (succeed)
 import Json.Decode.Pipeline exposing (required)
+import PulsarModel exposing (SubscriptionName, makeSubscriptionName)
 
 
 type alias TopicStats =
@@ -91,8 +92,6 @@ type alias TopicStatsSubscription =
     , filterProcessedMsgCount : Int
     , filterRejectedMsgCount : Int
     , filterRescheduledMsgCount : Int
-    , isDurable : Bool
-    , isReplicated : Bool
     , lastAckedTimestamp : Int
     , lastConsumedFlowTimestamp : Int
     , lastConsumedTimestamp : Int
@@ -115,7 +114,7 @@ type alias TopicStatsSubscription =
     , totalMsgExpired : Int
     , type_ : String
     , unackedMessages : Int
-    , name : String
+    , name : SubscriptionName
     }
 
 
@@ -235,10 +234,10 @@ topicStatsReplicationDecoder =
 
 topicStatsSubscriptionsDecoder : Json.Decode.Decoder (List TopicStatsSubscription)
 topicStatsSubscriptionsDecoder =
-    Json.Decode.keyValuePairs topicStatsSubscriptionDecoder |> Json.Decode.map (List.map (\( name, builder ) -> builder name))
+    Json.Decode.keyValuePairs topicStatsSubscriptionDecoder |> Json.Decode.map (List.map (\( name, builder ) -> builder (makeSubscriptionName name)))
 
 
-topicStatsSubscriptionDecoder : Json.Decode.Decoder (String -> TopicStatsSubscription)
+topicStatsSubscriptionDecoder : Json.Decode.Decoder (SubscriptionName -> TopicStatsSubscription)
 topicStatsSubscriptionDecoder =
     succeed TopicStatsSubscription
         |> required "allowOutOfOrderDelivery" Json.Decode.bool
@@ -255,8 +254,6 @@ topicStatsSubscriptionDecoder =
         |> required "filterProcessedMsgCount" Json.Decode.int
         |> required "filterRejectedMsgCount" Json.Decode.int
         |> required "filterRescheduledMsgCount" Json.Decode.int
-        |> required "isDurable" Json.Decode.bool
-        |> required "isReplicated" Json.Decode.bool
         |> required "lastAckedTimestamp" Json.Decode.int
         |> required "lastConsumedFlowTimestamp" Json.Decode.int
         |> required "lastConsumedTimestamp" Json.Decode.int
