@@ -5,7 +5,7 @@ import Json.Decode
 import Pulsar.Protocol.TopicInternalInfo exposing (internalInfoDecoder)
 import Pulsar.Protocol.TopicStats exposing (topicStatsDecoder)
 import Pulsar.Protocol.Topics exposing (topicsDecoder)
-import PulsarModel exposing (Mode(..), makeTopicName)
+import PulsarModel exposing (Mode(..), makeSubscriptionName, makeTopicName)
 import Test exposing (..)
 import Time exposing (millisToPosix)
 
@@ -272,7 +272,7 @@ suite =
                                 ]
                             , waitingPublishers = 0
                             , subscriptions =
-                                [ { name = "subscription-outgoing"
+                                [ { name = makeSubscriptionName "subscription-outgoing"
                                   , msgRateOut = 0.0
                                   , msgThroughputOut = 0.0
                                   , bytesOutCounter = 1301
@@ -320,8 +320,6 @@ suite =
                                           , lastConsumedTime = "1970-01-01T00:00:00Z"
                                           }
                                         ]
-                                  , isDurable = True
-                                  , isReplicated = False
                                   , allowOutOfOrderDelivery = False
                                   , consumersAfterMarkDeletePosition = {}
                                   , nonContiguousDeletedMessagesRanges = 0
