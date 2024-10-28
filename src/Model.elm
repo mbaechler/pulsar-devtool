@@ -15,8 +15,12 @@ type Page
         , version : Maybe Int
         , creationDate : Maybe String
         , modificationDate : Maybe String
-        , subscriptions : Maybe (List Subscription)
+        , subscriptions : Maybe Subscriptions
         }
+
+
+type alias Subscriptions =
+    List Subscription
 
 
 type alias Model =
