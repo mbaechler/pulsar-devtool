@@ -90,6 +90,54 @@ groupByPrefix subscriptions =
                 |> Dict.fromList
 
 
+twoStringsWithNoCommonPrefix : Fuzz.Fuzzer ( String.String, String.String )
+twoStringsWithNoCommonPrefix =
+    someStringsWithNoCommonPrefix 2
+        |> Fuzz.andThen
+            (\l ->
+                case l of
+                    [ first, second ] ->
+                        Fuzz.constant ( first, second )
+
+                    _ ->
+                        Fuzz.invalid "should generate exactly two strings"
+            )
+
+
+stringWithNoCommonPrefix previous =
+    let
+        string =
+            Fuzz.stringOfLengthBetween 1 10
+
+        hasCommonPrefix s =
+            previous |> List.any (\p -> String.startsWith (String.left 1 p) s)
+    in
+    string
+        |> Fuzz.andThen
+            (\s ->
+                if hasCommonPrefix s then
+                    stringWithNoCommonPrefix previous
+
+                else
+                    Fuzz.constant s
+            )
+
+
+someStringsWithNoCommonPrefix n =
+    let
+        someStringsWithNoCommonPrefix_ l remaining =
+            case remaining of
+                1 ->
+                    stringWithNoCommonPrefix l
+                        |> Fuzz.map (\elm -> elm :: l)
+
+                _ ->
+                    stringWithNoCommonPrefix l
+                        |> Fuzz.andThen (\elm -> someStringsWithNoCommonPrefix_ (elm :: l) (remaining - 1))
+    in
+    someStringsWithNoCommonPrefix_ [] n
+
+
 suite =
     describe "grouping subscription"
         [ test "should return empty on empty input" <|
@@ -130,48 +178,44 @@ suite =
                         (Dict.fromList
                             [ ( "lalalala", [ sub1 ] ), ( "fafafa", [ sub2 ] ) ]
                         )
+        , fuzz2 (Fuzz.stringOfLengthBetween 1 20) twoStringsWithNoCommonPrefix "should return two grouped subscriptions for any non empty prefix" <|
+            \prefix ( left, right ) ->
+                let
+                    sub1 =
+                        { name = makeSubscriptionName (prefix ++ left)
+                        , durable = True
+                        , hasConsumers = True
+                        }
 
-        -- FIXME: left and right should not be generated with a common prefix
-        , skip <|
-            fuzz3 (Fuzz.stringOfLengthBetween 1 20) Fuzz.string Fuzz.string "should return two grouped subscriptions for any non empty prefix" <|
-                \prefix left right ->
-                    let
-                        sub1 =
-                            { name = makeSubscriptionName (prefix ++ left)
-                            , durable = True
-                            , hasConsumers = True
-                            }
-
-                        sub2 =
-                            { name = makeSubscriptionName (prefix ++ right)
-                            , durable = True
-                            , hasConsumers = True
-                            }
-                    in
-                    groupByPrefix [ sub1, sub2 ]
-                        |> Expect.equal
-                            (Dict.fromList
-                                [ ( prefix, [ sub1, sub2 ] ) ]
-                            )
-        , skip <|
-            fuzz2 (Fuzz.stringOfLengthBetween 1 20) (Fuzz.listOfLength 3 Fuzz.string) "should return 3 grouped subscriptions for any non empty prefix" <|
-                \prefix suffixes ->
-                    let
-                        subscriptions =
-                            suffixes
-                                |> List.map
-                                    (\suffix ->
-                                        { name = makeSubscriptionName (prefix ++ suffix)
-                                        , durable = True
-                                        , hasConsumers = True
-                                        }
-                                    )
-                    in
-                    groupByPrefix subscriptions
-                        |> Expect.equal
-                            (Dict.fromList
-                                [ ( prefix, subscriptions ) ]
-                            )
+                    sub2 =
+                        { name = makeSubscriptionName (prefix ++ right)
+                        , durable = True
+                        , hasConsumers = True
+                        }
+                in
+                groupByPrefix [ sub1, sub2 ]
+                    |> Expect.equal
+                        (Dict.fromList
+                            [ ( prefix, [ sub1, sub2 ] ) ]
+                        )
+        , fuzz2 (Fuzz.stringOfLengthBetween 1 20) (someStringsWithNoCommonPrefix 3) "should return 3 grouped subscriptions for any non empty prefix" <|
+            \prefix suffixes ->
+                let
+                    subscriptions =
+                        suffixes
+                            |> List.map
+                                (\suffix ->
+                                    { name = makeSubscriptionName (prefix ++ suffix)
+                                    , durable = True
+                                    , hasConsumers = True
+                                    }
+                                )
+                in
+                groupByPrefix subscriptions
+                    |> Expect.equal
+                        (Dict.fromList
+                            [ ( prefix, subscriptions ) ]
+                        )
         , test "should return three grouped subscriptions" <|
             \_ ->
                 let
