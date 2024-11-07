@@ -138,6 +138,13 @@ someStringsWithNoCommonPrefix n =
     someStringsWithNoCommonPrefix_ [] n
 
 
+makeSubscriptionWithName name =
+    { name = makeSubscriptionName name
+    , durable = True
+    , hasConsumers = True
+    }
+
+
 suite =
     describe "grouping subscription"
         [ test "should return empty on empty input" <|
@@ -146,70 +153,44 @@ suite =
                     |> Expect.equal Dict.empty
         , test "should return one subscription" <|
             \_ ->
-                let
-                    sub1 =
-                        { name = makeSubscriptionName "lalalala"
-                        , durable = True
-                        , hasConsumers = True
-                        }
-                in
-                groupByPrefix [ sub1 ]
+                groupByPrefix [ makeSubscriptionWithName "lalalala" ]
                     |> Expect.equal
                         (Dict.fromList
-                            [ ( "lalalala", [ sub1 ] ) ]
+                            [ ( "lalalala", [ makeSubscriptionWithName "lalalala" ] ) ]
                         )
         , test "should return two not-grouped subscriptions" <|
             \_ ->
-                let
-                    sub1 =
-                        { name = makeSubscriptionName "lalalala"
-                        , durable = True
-                        , hasConsumers = True
-                        }
-
-                    sub2 =
-                        { name = makeSubscriptionName "fafafa"
-                        , durable = True
-                        , hasConsumers = True
-                        }
-                in
-                groupByPrefix [ sub1, sub2 ]
+                groupByPrefix
+                    [ makeSubscriptionWithName "lalalala"
+                    , makeSubscriptionWithName "fafafa"
+                    ]
                     |> Expect.equal
                         (Dict.fromList
-                            [ ( "lalalala", [ sub1 ] ), ( "fafafa", [ sub2 ] ) ]
+                            [ ( "lalalala", [ makeSubscriptionWithName "lalalala" ] )
+                            , ( "fafafa", [ makeSubscriptionWithName "fafafa" ] )
+                            ]
                         )
         , fuzz2 (Fuzz.stringOfLengthBetween 1 20) twoStringsWithNoCommonPrefix "should return two grouped subscriptions for any non empty prefix" <|
             \prefix ( left, right ) ->
-                let
-                    sub1 =
-                        { name = makeSubscriptionName (prefix ++ left)
-                        , durable = True
-                        , hasConsumers = True
-                        }
-
-                    sub2 =
-                        { name = makeSubscriptionName (prefix ++ right)
-                        , durable = True
-                        , hasConsumers = True
-                        }
-                in
-                groupByPrefix [ sub1, sub2 ]
+                groupByPrefix
+                    [ makeSubscriptionWithName (prefix ++ left)
+                    , makeSubscriptionWithName (prefix ++ right)
+                    ]
                     |> Expect.equal
                         (Dict.fromList
-                            [ ( prefix, [ sub1, sub2 ] ) ]
+                            [ ( prefix
+                              , [ makeSubscriptionWithName (prefix ++ left)
+                                , makeSubscriptionWithName (prefix ++ right)
+                                ]
+                              )
+                            ]
                         )
         , fuzz2 (Fuzz.stringOfLengthBetween 1 20) (someStringsWithNoCommonPrefix 3) "should return 3 grouped subscriptions for any non empty prefix" <|
             \prefix suffixes ->
                 let
                     subscriptions =
                         suffixes
-                            |> List.map
-                                (\suffix ->
-                                    { name = makeSubscriptionName (prefix ++ suffix)
-                                    , durable = True
-                                    , hasConsumers = True
-                                    }
-                                )
+                            |> List.map (\suffix -> makeSubscriptionWithName (prefix ++ suffix))
                 in
                 groupByPrefix subscriptions
                     |> Expect.equal
@@ -218,93 +199,36 @@ suite =
                         )
         , test "should return three grouped subscriptions" <|
             \_ ->
-                let
-                    sub1 =
-                        { name = makeSubscriptionName "prefix-1"
-                        , durable = True
-                        , hasConsumers = True
-                        }
-
-                    sub2 =
-                        { name = makeSubscriptionName "prefix-2"
-                        , durable = True
-                        , hasConsumers = True
-                        }
-
-                    sub3 =
-                        { name = makeSubscriptionName "prefix-3"
-                        , durable = True
-                        , hasConsumers = True
-                        }
-                in
-                groupByPrefix [ sub1, sub2, sub3 ]
+                groupByPrefix
+                    [ makeSubscriptionWithName "prefix-1"
+                    , makeSubscriptionWithName "prefix-2"
+                    , makeSubscriptionWithName "prefix-3"
+                    ]
                     |> Expect.equal
                         (Dict.fromList
-                            [ ( "prefix-", [ sub1, sub2, sub3 ] ) ]
+                            [ ( "prefix-"
+                              , [ makeSubscriptionWithName "prefix-1"
+                                , makeSubscriptionWithName "prefix-2"
+                                , makeSubscriptionWithName "prefix-3"
+                                ]
+                              )
+                            ]
                         )
         , test "should return two grouped subscriptions and one single group" <|
             \_ ->
-                let
-                    sub1 =
-                        { name = makeSubscriptionName "prefix-1"
-                        , durable = True
-                        , hasConsumers = True
-                        }
-
-                    sub2 =
-                        { name = makeSubscriptionName "prefix-2"
-                        , durable = True
-                        , hasConsumers = True
-                        }
-
-                    other =
-                        { name = makeSubscriptionName "other"
-                        , durable = True
-                        , hasConsumers = True
-                        }
-                in
-                groupByPrefix [ sub1, sub2, other ]
+                groupByPrefix
+                    [ makeSubscriptionWithName "prefix-1"
+                    , makeSubscriptionWithName "prefix-2"
+                    , makeSubscriptionWithName "other"
+                    ]
                     |> Expect.equal
                         (Dict.fromList
-                            [ ( "prefix-", [ sub1, sub2 ] ), ( "other", [ other ] ) ]
+                            [ ( "prefix-"
+                              , [ makeSubscriptionWithName "prefix-1"
+                                , makeSubscriptionWithName "prefix-2"
+                                ]
+                              )
+                            , ( "other", [ makeSubscriptionWithName "other" ] )
+                            ]
                         )
-        , skip <|
-            test "should return two grouped subscriptions and another group" <|
-                \_ ->
-                    let
-                        prefix =
-                            "toto"
-
-                        left =
-                            "a"
-
-                        right =
-                            "b"
-
-                        other =
-                            "lalala"
-
-                        sub1 =
-                            { name = makeSubscriptionName (prefix ++ left)
-                            , durable = True
-                            , hasConsumers = True
-                            }
-
-                        sub2 =
-                            { name = makeSubscriptionName (prefix ++ right)
-                            , durable = True
-                            , hasConsumers = True
-                            }
-
-                        subother =
-                            { name = makeSubscriptionName other
-                            , durable = True
-                            , hasConsumers = True
-                            }
-                    in
-                    groupByPrefix [ sub1, sub2, subother ]
-                        |> Expect.equal
-                            (Dict.fromList
-                                [ ( prefix, [ sub1, sub2 ] ), ( other, [ subother ] ) ]
-                            )
         ]
