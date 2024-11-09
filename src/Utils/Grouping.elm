@@ -26,12 +26,6 @@ longestPrefix left right =
         |> String.fromList
 
 
-cartesianProduct : List a -> List ( a, a )
-cartesianProduct list =
-    list
-        |> List.concatMap (\v1 -> list |> List.map (\v2 -> ( v1, v2 )))
-
-
 groupByPrefix : List Subscription -> GroupedSubscriptions
 groupByPrefix subscriptions =
     case subscriptions of
@@ -45,8 +39,7 @@ groupByPrefix subscriptions =
             let
                 subscriptionsByPrefix =
                     list
-                        |> cartesianProduct
-                        |> List.filter (\( a, b ) -> a /= b)
+                        |> List.Extra.uniquePairs
                         |> Dict.Extra.groupBy (\( a, b ) -> longestPrefix (subscriptionNameAsString a) (subscriptionNameAsString b))
                         |> Dict.map (\p -> \values -> values |> List.concatMap (\( a, b ) -> [ a, b ]) |> List.Extra.unique)
                         |> Dict.toList
