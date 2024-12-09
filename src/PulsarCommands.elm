@@ -1,8 +1,9 @@
-module PulsarCommands exposing (PulsarConfig, listSubscriptions, loadTopicInternalInfo, loadTopics, topicStats)
+module PulsarCommands exposing (PulsarConfig, listSubscriptions, loadMessages, loadTopicInternalInfo, loadTopics, topicStats)
 
-import Http exposing (Body, Expect, Header)
+import Http exposing (Body, Error(..), Expect, Header, Response(..))
 import Json.Decode as Decode exposing (Error)
 import Pulsar
+import Pulsar.Protocol.Messages exposing (Message, messageDecoder)
 import Pulsar.Protocol.TopicInternalInfo exposing (InternalInfo, internalInfoDecoder)
 import Pulsar.Protocol.TopicStats exposing (TopicStats, topicStatsDecoder)
 import Pulsar.Protocol.Topics exposing (topicsDecoder)
@@ -47,6 +48,34 @@ loadTopicInternalInfo f pulsar topic token =
     getRequest
         { url = Url.Builder.crossOrigin pulsar.httpUrl [ "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace, topicNameAsString topic, "internal-info" ] []
         , expect = Http.expectJson f internalInfoDecoder
+        }
+        |> withBearerToken token
+        |> Http.request
+
+
+loadMessages : (Result Http.Error Message -> msg) -> PulsarConfig -> TopicName -> Pulsar.PulsarToken -> Cmd msg
+loadMessages f pulsar topic token =
+    getRequest
+        { url = Url.Builder.crossOrigin pulsar.httpUrl [ "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace, topicNameAsString topic, "examinemessage" ] [ Url.Builder.string "initialPosition" "latest" ]
+        , expect =
+            Http.expectStringResponse f
+                (\response ->
+                    case response of
+                        BadUrl_ url ->
+                            Err (BadUrl url)
+
+                        Timeout_ ->
+                            Err Timeout
+
+                        NetworkError_ ->
+                            Err NetworkError
+
+                        BadStatus_ metadata _ ->
+                            Err (BadStatus metadata.statusCode)
+
+                        GoodStatus_ metadata body ->
+                            Result.mapError BadBody (messageDecoder metadata body)
+                )
         }
         |> withBearerToken token
         |> Http.request

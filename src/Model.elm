@@ -2,6 +2,7 @@ module Model exposing (Model, Page(..), clearStatus, clearToken, init, withCurre
 
 import Browser.Navigation as Navigation
 import Pulsar exposing (PulsarToken, makeToken)
+import Pulsar.Protocol.Messages exposing (Message)
 import PulsarCommands exposing (PulsarConfig)
 import PulsarModel exposing (Subscription, SubscriptionName, Topic, TopicName)
 
@@ -17,6 +18,7 @@ type Page
         , modificationDate : Maybe String
         , subscriptions : Maybe Subscriptions
         }
+    | MessagesPage { topicName : TopicName, message : Maybe Message }
 
 
 type alias Subscriptions =
@@ -77,6 +79,9 @@ withSubscriptions : List Subscription -> Page -> Page
 withSubscriptions subscriptions page =
     case page of
         Loading ->
+            page
+
+        MessagesPage _ ->
             page
 
         SecretPage ->

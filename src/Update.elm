@@ -1,4 +1,4 @@
-module Update exposing (Msg(..), subscriptions, topicUrl, update)
+module Update exposing (Msg(..), messagesUrl, subscriptions, topicUrl, update)
 
 import Browser
 import Browser.Navigation as Navigation
@@ -6,7 +6,7 @@ import Model exposing (Model, Page(..), clearToken, withCurrentPage, withStatus,
 import Pulsar exposing (makeToken)
 import Pulsar.Protocol.TopicInternalInfo exposing (InternalInfo)
 import Pulsar.Protocol.TopicStats exposing (TopicStats)
-import PulsarCommands exposing (loadTopicInternalInfo, loadTopics, topicStats)
+import PulsarCommands exposing (loadMessages, loadTopicInternalInfo, loadTopics, topicStats)
 import PulsarModel exposing (SubscriptionName, Topic, makeTopicName, topicNameAsString)
 import RouteBuilder exposing (Route, dynamic, root, s, static, string)
 import Secret exposing (Msg(..), savePulsarToken)
@@ -22,12 +22,20 @@ type alias FetchTopicInternalInfoResult =
     InternalInfo
 
 
+type alias FetchMessagesResult =
+    { content : String
+    , size : Int
+    }
+
+
 type Msg
     = FetchListPulsar
     | FetchListDone FetchListResult
     | FetchListFailed
     | FetchTopicInternalInfoDone FetchTopicInternalInfoResult
     | FetchTopicInternalInfoFailed
+    | FetchMessagesDone FetchMessagesResult
+    | FetchMessagesFailed
     | FetchTopicStatsDone TopicStats
     | FetchTopicStatsFailed
     | UrlRequested Browser.UrlRequest
@@ -111,6 +119,24 @@ update msg model =
                 Nothing ->
                     model |> withNoCommand
 
+                Just (MessagesPage topic) ->
+                    model
+                        |> withCurrentPage (MessagesPage topic)
+                        |> withCommand
+                            (loadMessages
+                                (\result ->
+                                    case result of
+                                        Err _ ->
+                                            FetchMessagesFailed
+
+                                        Ok value ->
+                                            FetchMessagesDone value
+                                )
+                                model.pulsarConfig
+                                topic.topicName
+                                model.token
+                            )
+
                 Just (TopicPage topic) ->
                     model
                         |> withCurrentPage (TopicPage topic)
@@ -129,12 +155,41 @@ update msg model =
                                 model.token
                             )
 
+        -- FIXME
+        FetchMessagesDone message ->
+            case model.currentPage of
+                Loading ->
+                    model |> withNoCommand
+
+                ListPage ->
+                    model |> withNoCommand
+
+                MessagesPage page ->
+                    { model
+                        | currentPage = MessagesPage { page | message = Just message }
+                    }
+                        |> withNoCommand
+
+                TopicPage topicPageModel ->
+                    model |> withNoCommand
+
+                SecretPage ->
+                    model |> withNoCommand
+
+        FetchMessagesFailed ->
+            model
+                |> withStatus (String.join " / " [ "fetch messages failed" ])
+                |> withNoCommand
+
         FetchTopicInternalInfoDone info ->
             case model.currentPage of
                 Loading ->
                     model |> withNoCommand
 
                 ListPage ->
+                    model |> withNoCommand
+
+                MessagesPage _ ->
                     model |> withNoCommand
 
                 TopicPage topicPageModel ->
@@ -260,6 +315,24 @@ topicParser =
     topicRoute.toParser (\topicPageModel -> TopicPage { topicName = makeTopicName topicPageModel.topicName, creationDate = Nothing, modificationDate = Nothing, version = Nothing, subscriptions = Nothing })
 
 
+type alias MessagesPageModel =
+    { topicName : String }
+
+
+messagesRoute : Route TopicPageModel Page
+messagesRoute =
+    root |> s "topic" |> string .topicName |> s "messages" |> dynamic MessagesPageModel
+
+
+messagesUrl : Topic -> String
+messagesUrl topic =
+    messagesRoute.toString { topicName = topicNameAsString topic.name }
+
+
+messagesParser =
+    messagesRoute.toParser (\topicPageModel -> MessagesPage { topicName = makeTopicName topicPageModel.topicName, message = Nothing })
+
+
 listRoute : Route () Page
 listRoute =
     root |> static
@@ -288,7 +361,11 @@ secretParser =
 
 routes =
     oneOf
-        [ topicParser, listParser, secretParser ]
+        [ topicParser
+        , messagesParser
+        , listParser
+        , secretParser
+        ]
 
 
 subscriptions _ =
