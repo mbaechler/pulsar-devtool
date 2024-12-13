@@ -6,7 +6,7 @@ import Model exposing (Model, Page(..), clearToken, withCurrentPage, withStatus,
 import Pulsar exposing (makeToken)
 import Pulsar.Protocol.TopicInternalInfo exposing (InternalInfo)
 import Pulsar.Protocol.TopicStats exposing (TopicStats)
-import PulsarCommands exposing (loadLatestMessage, loadLatestMessages, loadTopicInternalInfo, loadTopics, topicStats)
+import PulsarCommands
 import PulsarModel exposing (SubscriptionName, Topic, makeTopicName, topicNameAsString)
 import RouteBuilder exposing (Route, dynamic, root, s, static, string)
 import Secret exposing (Msg(..), savePulsarToken)
@@ -73,7 +73,7 @@ update msg model =
                 |> withStatus "fetching in progress"
                 |> withTopics []
                 |> withCommand
-                    (loadTopics
+                    (PulsarCommands.loadTopics
                         (\result ->
                             case result of
                                 Err _ ->
@@ -82,8 +82,7 @@ update msg model =
                                 Ok value ->
                                     FetchListDone value
                         )
-                        model.pulsarConfig
-                        model.token
+                        model
                     )
 
         FetchListFailed ->
@@ -125,7 +124,7 @@ update msg model =
                     model
                         |> withCurrentPage (MessagesPage topic)
                         |> withCommand
-                            (loadLatestMessages
+                            (PulsarCommands.loadLatestMessages
                                 (\result ->
                                     case result of
                                         Err _ ->
@@ -134,17 +133,16 @@ update msg model =
                                         Ok value ->
                                             FetchMessagesDone value
                                 )
-                                (List.range 1 10)
-                                model.pulsarConfig
+                                model
                                 topic.topicName
-                                model.token
+                                (List.range 1 10)
                             )
 
                 Just (TopicPage topic) ->
                     model
                         |> withCurrentPage (TopicPage topic)
                         |> withCommand
-                            (loadTopicInternalInfo
+                            (PulsarCommands.loadTopicInternalInfo
                                 (\result ->
                                     case result of
                                         Err _ ->
@@ -153,9 +151,8 @@ update msg model =
                                         Ok value ->
                                             FetchTopicInternalInfoDone value
                                 )
-                                model.pulsarConfig
+                                model
                                 topic.topicName
-                                model.token
                             )
 
         -- FIXME
@@ -206,7 +203,7 @@ update msg model =
                                 }
                             )
                         |> withCommand
-                            (topicStats
+                            (PulsarCommands.topicStats
                                 (\result ->
                                     case result of
                                         Err _ ->
@@ -215,9 +212,8 @@ update msg model =
                                         Ok subscriptionNames ->
                                             FetchTopicStatsDone subscriptionNames
                                 )
-                                model.pulsarConfig
+                                model
                                 topicPageModel.topicName
-                                model.token
                             )
 
                 SecretPage ->
@@ -254,7 +250,7 @@ update msg model =
         SecretSubmit ->
             model
                 |> withCommand
-                    (loadTopics
+                    (PulsarCommands.loadTopics
                         (\result ->
                             case result of
                                 Err _ ->
@@ -263,8 +259,7 @@ update msg model =
                                 Ok value ->
                                     AuthSucceed
                         )
-                        model.pulsarConfig
-                        model.token
+                        model
                     )
 
         AuthSucceed ->

@@ -23,6 +23,10 @@ type alias PulsarConfig =
     }
 
 
+type alias PulsarParams a =
+    { a | pulsarConfig : PulsarConfig, token : Pulsar.PulsarToken }
+
+
 type alias Request msg =
     { method : String
     , headers : List Header
@@ -44,34 +48,34 @@ type alias RequestTask a =
     }
 
 
-loadTopics : (Result Http.Error (List Topic) -> msg) -> PulsarConfig -> Pulsar.PulsarToken -> Cmd msg
-loadTopics f pulsar token =
+loadTopics : (Result Http.Error (List Topic) -> msg) -> PulsarParams a -> Cmd msg
+loadTopics f { pulsarConfig, token } =
     getRequest
-        { url = Url.Builder.crossOrigin pulsar.httpUrl [ "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace ] []
+        { url = Url.Builder.crossOrigin pulsarConfig.httpUrl [ "admin", "v2", "persistent", pulsarConfig.tenant, pulsarConfig.namespace ] []
         , expect = Http.expectJson f topicsDecoder
         }
         |> withBearerToken token
         |> Http.request
 
 
-loadTopicInternalInfo : (Result Http.Error InternalInfo -> msg) -> PulsarConfig -> TopicName -> Pulsar.PulsarToken -> Cmd msg
-loadTopicInternalInfo f pulsar topic token =
+loadTopicInternalInfo : (Result Http.Error InternalInfo -> msg) -> PulsarParams a -> TopicName -> Cmd msg
+loadTopicInternalInfo f { pulsarConfig, token } topic =
     getRequest
-        { url = Url.Builder.crossOrigin pulsar.httpUrl [ "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace, topicNameAsString topic, "internal-info" ] []
+        { url = Url.Builder.crossOrigin pulsarConfig.httpUrl [ "admin", "v2", "persistent", pulsarConfig.tenant, pulsarConfig.namespace, topicNameAsString topic, "internal-info" ] []
         , expect = Http.expectJson f internalInfoDecoder
         }
         |> withBearerToken token
         |> Http.request
 
 
-loadLatestMessageTask : Int -> PulsarConfig -> TopicName -> Pulsar.PulsarToken -> Task Http.Error Message
-loadLatestMessageTask messagePosition pulsar topic token =
+loadLatestMessageTask : PulsarParams a -> TopicName -> Int -> Task Http.Error Message
+loadLatestMessageTask { pulsarConfig, token } topic messagePosition =
     let
         request =
             getRequestTask
                 { url =
-                    Url.Builder.crossOrigin pulsar.httpUrl
-                        [ "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace, topicNameAsString topic, "examinemessage" ]
+                    Url.Builder.crossOrigin pulsarConfig.httpUrl
+                        [ "admin", "v2", "persistent", pulsarConfig.tenant, pulsarConfig.namespace, topicNameAsString topic, "examinemessage" ]
                         [ Url.Builder.string "initialPosition" "latest"
                         , Url.Builder.int "messagePosition" messagePosition
                         ]
@@ -98,17 +102,17 @@ loadLatestMessageTask messagePosition pulsar topic token =
     request |> Http.riskyTask
 
 
-loadLatestMessage : (Result Http.Error Message -> msg) -> PulsarConfig -> TopicName -> Pulsar.PulsarToken -> Cmd msg
-loadLatestMessage f pulsar topic token =
-    loadLatestMessageTask 1 pulsar topic token
+loadLatestMessage : (Result Http.Error Message -> msg) -> PulsarParams a -> TopicName -> Cmd msg
+loadLatestMessage f params topic =
+    loadLatestMessageTask params topic 1
         |> Task.attempt f
 
 
-loadLatestMessages : (Result Http.Error (List Message) -> msg) -> List Int -> PulsarConfig -> TopicName -> Pulsar.PulsarToken -> Cmd msg
-loadLatestMessages f range pulsar topic token =
+loadLatestMessages : (Result Http.Error (List Message) -> msg) -> PulsarParams a -> TopicName -> List Int -> Cmd msg
+loadLatestMessages f params topic range =
     let
-        loadMessage position =
-            loadLatestMessageTask position pulsar topic token
+        loadMessage =
+            loadLatestMessageTask params topic
     in
     range
         |> List.map loadMessage
@@ -116,20 +120,20 @@ loadLatestMessages f range pulsar topic token =
         |> Task.attempt f
 
 
-listSubscriptions : (Result Http.Error (List SubscriptionName) -> msg) -> PulsarConfig -> TopicName -> Pulsar.PulsarToken -> Cmd msg
-listSubscriptions f pulsar topic token =
+listSubscriptions : (Result Http.Error (List SubscriptionName) -> msg) -> PulsarParams a -> TopicName -> Cmd msg
+listSubscriptions f { pulsarConfig, token } topic =
     getRequest
-        { url = Url.Builder.crossOrigin pulsar.httpUrl [ "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace, topicNameAsString topic, "subscriptions" ] []
+        { url = Url.Builder.crossOrigin pulsarConfig.httpUrl [ "admin", "v2", "persistent", pulsarConfig.tenant, pulsarConfig.namespace, topicNameAsString topic, "subscriptions" ] []
         , expect = Http.expectJson f (Decode.list (Decode.string |> Decode.map makeSubscriptionName))
         }
         |> withBearerToken token
         |> Http.request
 
 
-topicStats : (Result Http.Error TopicStats -> msg) -> PulsarConfig -> TopicName -> Pulsar.PulsarToken -> Cmd msg
-topicStats f pulsar topic token =
+topicStats : (Result Http.Error TopicStats -> msg) -> PulsarParams a -> TopicName -> Cmd msg
+topicStats f { pulsarConfig, token } topic =
     getRequest
-        { url = Url.Builder.crossOrigin pulsar.httpUrl [ "admin", "v2", "persistent", pulsar.tenant, pulsar.namespace, topicNameAsString topic, "stats" ] []
+        { url = Url.Builder.crossOrigin pulsarConfig.httpUrl [ "admin", "v2", "persistent", pulsarConfig.tenant, pulsarConfig.namespace, topicNameAsString topic, "stats" ] []
         , expect = Http.expectJson f topicStatsDecoder
         }
         |> withBearerToken token
