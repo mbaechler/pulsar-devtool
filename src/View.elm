@@ -34,7 +34,7 @@ viewPage { topics, currentPage } =
             viewTopic topic
 
         MessagesPage topic ->
-            viewMessage topic
+            viewMessages topic
 
         Loading ->
             text "Loading"
@@ -80,14 +80,19 @@ viewTopic { topicName, version, creationDate, modificationDate, subscriptions } 
         ]
 
 
-viewMessage : { topicName : TopicName, message : Maybe Message } -> Html msg
-viewMessage { topicName, message } =
+viewMessages : { topicName : TopicName, messages : List Message } -> Html msg
+viewMessages { topicName, messages } =
     div
         []
-        [ text <| "messages for topic " ++ topicNameAsString topicName
-        , pre [] [ text (message |> Maybe.map .content |> Maybe.withDefault "") ]
-        , text <| "size " ++ (message |> Maybe.map .size |> Maybe.map String.fromInt |> Maybe.withDefault "")
-        ]
+    <|
+        [ text <| "messages for topic " ++ topicNameAsString topicName ]
+            ++ List.concatMap viewMessage messages
+
+
+viewMessage message =
+    [ pre [] [ text message.content ]
+    , text <| "size " ++ (message.size |> String.fromInt)
+    ]
 
 
 viewSubscriptions : Maybe (List Subscription) -> Html msg

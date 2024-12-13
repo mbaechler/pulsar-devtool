@@ -6,7 +6,7 @@ import Model exposing (Model, Page(..), clearToken, withCurrentPage, withStatus,
 import Pulsar exposing (makeToken)
 import Pulsar.Protocol.TopicInternalInfo exposing (InternalInfo)
 import Pulsar.Protocol.TopicStats exposing (TopicStats)
-import PulsarCommands exposing (loadMessages, loadTopicInternalInfo, loadTopics, topicStats)
+import PulsarCommands exposing (loadLatestMessage, loadLatestMessages, loadTopicInternalInfo, loadTopics, topicStats)
 import PulsarModel exposing (SubscriptionName, Topic, makeTopicName, topicNameAsString)
 import RouteBuilder exposing (Route, dynamic, root, s, static, string)
 import Secret exposing (Msg(..), savePulsarToken)
@@ -23,9 +23,11 @@ type alias FetchTopicInternalInfoResult =
 
 
 type alias FetchMessagesResult =
-    { content : String
-    , size : Int
-    }
+    List
+        { content : String
+        , size : Int
+        , sequenceId : Int
+        }
 
 
 type Msg
@@ -123,7 +125,7 @@ update msg model =
                     model
                         |> withCurrentPage (MessagesPage topic)
                         |> withCommand
-                            (loadMessages
+                            (loadLatestMessages
                                 (\result ->
                                     case result of
                                         Err _ ->
@@ -132,6 +134,7 @@ update msg model =
                                         Ok value ->
                                             FetchMessagesDone value
                                 )
+                                (List.range 1 10)
                                 model.pulsarConfig
                                 topic.topicName
                                 model.token
@@ -156,7 +159,7 @@ update msg model =
                             )
 
         -- FIXME
-        FetchMessagesDone message ->
+        FetchMessagesDone messages ->
             case model.currentPage of
                 Loading ->
                     model |> withNoCommand
@@ -166,7 +169,7 @@ update msg model =
 
                 MessagesPage page ->
                     { model
-                        | currentPage = MessagesPage { page | message = Just message }
+                        | currentPage = MessagesPage { page | messages = messages }
                     }
                         |> withNoCommand
 
@@ -330,7 +333,7 @@ messagesUrl topic =
 
 
 messagesParser =
-    messagesRoute.toParser (\topicPageModel -> MessagesPage { topicName = makeTopicName topicPageModel.topicName, message = Nothing })
+    messagesRoute.toParser (\topicPageModel -> MessagesPage { topicName = makeTopicName topicPageModel.topicName, messages = [] })
 
 
 listRoute : Route () Page

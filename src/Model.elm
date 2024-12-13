@@ -18,7 +18,7 @@ type Page
         , modificationDate : Maybe String
         , subscriptions : Maybe Subscriptions
         }
-    | MessagesPage { topicName : TopicName, message : Maybe Message }
+    | MessagesPage { topicName : TopicName, messages : List Message }
 
 
 type alias Subscriptions =
